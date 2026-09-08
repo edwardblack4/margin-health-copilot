@@ -4,7 +4,7 @@
 
 Built for the Binance Agent OS Mini Hackathon (Track A).
 
-📺 **Demo video:** _[add link here after recording]_
+📺 **Demo video:** _[[https://youtu.be/mE4Jl8uKFoU]]
 🔗 **Live connector:** `https://agent.binance.com/mcp/agentic`
 
 ---
