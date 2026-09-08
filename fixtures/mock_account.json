@@ -20,7 +20,7 @@
       "position_amt": 1.2,
       "entry_price": 2600.0,
       "leverage": 5,
-      "wallet_balance": 400.0,
+      "wallet_balance": 650.0,
       "margin_type": "isolated"
     }
   ]

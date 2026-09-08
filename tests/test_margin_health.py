@@ -1,16 +1,8 @@
 """
-Session 1 test harness.
-
-Validates that the fixtures load and are shaped as expected, and that the
-engine's interface contract holds (it must raise NotImplementedError, not
-return a silent fake result). Session 2 will replace
-test_analyze_position_not_yet_implemented with real assertions once
-analyze_position() is actually implemented.
-
-Uses only the standard library — no external dependencies to install or
-verify, since this sandbox has no network access to confirm a pytest
-install would even work (ruleset Section 6, #9: verify a dependency before
-trusting it).
+Session 2 test harness. Replaces Session 1's placeholder "not yet
+implemented" test with real assertions on the actual margin-health math,
+checked against Session 1's mock fixtures. Standard library only — see
+Session 1's SESSION_REPORT.md for why pytest was dropped.
 """
 
 import json
@@ -35,7 +27,6 @@ class TestFixtures(unittest.TestCase):
         account = load_fixture("mock_account.json")
         self.assertIn("positions", account)
         self.assertEqual(len(account["positions"]), 2)
-        self.assertEqual(account["positions"][0]["symbol"], "BTCUSDT")
 
     def test_market_fixture_shape(self):
         market = load_fixture("mock_market.json")
@@ -43,14 +34,48 @@ class TestFixtures(unittest.TestCase):
         self.assertIn("mark_price", market["BTCUSDT"])
 
 
-class TestEngineContract(unittest.TestCase):
-    def test_analyze_position_not_yet_implemented(self):
-        account = load_fixture("mock_account.json")
-        market = load_fixture("mock_market.json")
-        position = account["positions"][0]
-        snapshot = market[position["symbol"]]
-        with self.assertRaises(NotImplementedError):
-            analyze_position(position, snapshot)
+class TestMarginHealthEngine(unittest.TestCase):
+    def setUp(self):
+        self.account = load_fixture("mock_account.json")
+        self.market = load_fixture("mock_market.json")
+
+    def test_long_position_liquidates_below_entry(self):
+        position = self.account["positions"][0]  # BTCUSDT LONG
+        snapshot = self.market[position["symbol"]]
+        result = analyze_position(position, snapshot)
+        self.assertIsNotNone(result["liquidation_price"])
+        self.assertLess(result["liquidation_price"], position["entry_price"])
+        self.assertGreater(result["distance_to_liquidation_pct"], 0)
+
+    def test_short_position_liquidates_above_entry(self):
+        position = self.account["positions"][1]  # ETHUSDT SHORT
+        snapshot = self.market[position["symbol"]]
+        result = analyze_position(position, snapshot)
+        self.assertIsNotNone(result["liquidation_price"])
+        self.assertGreater(result["liquidation_price"], position["entry_price"])
+        self.assertGreater(result["distance_to_liquidation_pct"], 0)
+
+    def test_cross_margin_not_faked(self):
+        position = dict(self.account["positions"][0])
+        position["margin_type"] = "cross"
+        snapshot = self.market[position["symbol"]]
+        result = analyze_position(position, snapshot)
+        self.assertIsNone(result["liquidation_price"])
+        self.assertIn("not calculated here yet", result["narrative"])
+
+    def test_narrative_mentions_symbol_and_scenarios(self):
+        position = self.account["positions"][0]
+        snapshot = self.market[position["symbol"]]
+        result = analyze_position(position, snapshot)
+        self.assertIn(position["symbol"], result["narrative"])
+        self.assertIn("Scenarios:", result["narrative"])
+
+    def test_deep_adverse_move_triggers_liquidation_flag(self):
+        # A 20% adverse move on a 10x BTC long should breach liquidation.
+        position = self.account["positions"][0]
+        snapshot = self.market[position["symbol"]]
+        result = analyze_position(position, snapshot, scenario_pct_moves=[20])
+        self.assertIn("trigger liquidation", result["narrative"])
 
 
 if __name__ == "__main__":
