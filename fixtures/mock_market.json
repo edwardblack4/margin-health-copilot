@@ -1,0 +1,16 @@
+{
+  "BTCUSDT": {
+    "symbol": "BTCUSDT",
+    "mark_price": 60500.0,
+    "last_price": 60480.0,
+    "24h_change_pct": 1.2,
+    "funding_rate": 0.0001
+  },
+  "ETHUSDT": {
+    "symbol": "ETHUSDT",
+    "mark_price": 2580.0,
+    "last_price": 2582.0,
+    "24h_change_pct": -0.8,
+    "funding_rate": -0.00005
+  }
+}

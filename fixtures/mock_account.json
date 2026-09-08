@@ -1,0 +1,27 @@
+{
+  "sub_account_type": "Agentic virtual sub",
+  "wallet_balances": {
+    "USDS-M Futures": 1000.0,
+    "Spot": 250.0
+  },
+  "positions": [
+    {
+      "symbol": "BTCUSDT",
+      "side": "LONG",
+      "position_amt": 0.05,
+      "entry_price": 60000.0,
+      "leverage": 10,
+      "wallet_balance": 300.0,
+      "margin_type": "isolated"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "side": "SHORT",
+      "position_amt": 1.2,
+      "entry_price": 2600.0,
+      "leverage": 5,
+      "wallet_balance": 400.0,
+      "margin_type": "isolated"
+    }
+  ]
+}
