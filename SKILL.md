@@ -1,50 +1,61 @@
 ---
 name: margin-health-copilot
-description: Use this skill when the user is connected to the Binance Agent OS MCP server and asks about their position risk, margin health, liquidation distance, or "how exposed am I" on a specific symbol. Read-only — this skill never places, modifies, or cancels an order; it only reads account/position and market data and narrates risk.
+description: Use this skill when the user is connected to the Binance Agent OS MCP server and asks about their margin/position risk, margin level, liquidation distance, or "how exposed am I". Read-only — this skill never places, modifies, or cancels an order; it only reads account and market data and narrates risk.
 ---
 
 # Margin Health Copilot
 
-**Status:** Session 1 scaffold — calculation logic not yet implemented.
-See `BUILD_ROADMAP.md`, Session 2.
+**Status:** Session 3 complete. Primary capability is Cross Margin health,
+calibrated against a real live account call. Futures isolated-margin
+support exists (Session 2) but is unverified — Futures API access was
+confirmed blocked on the connected account.
 
 ## What this skill does
 
-Turns a live Binance Agentic sub-account position into a plain-English
-early-warning read on liquidation risk — how far the current price is from
-a margin call, and what a given price move would do to that distance.
+**Cross Margin (primary, live-verified):** reads the connected account's
+real margin level via Binance's Account (read-only) scope and narrates how
+close it is to a margin call (~1.3x) or forced liquidation (~1.1x), in
+plain English.
+
+**Futures isolated-margin (Session 2, unverified):** given a position's
+entry price, size, and leverage, derives an estimated liquidation price
+and runs adverse-scenario stress tests. Built and unit-tested against mock
+data only — this account's Futures API access returned a permissions
+error on every endpoint tried, so this path has never been exercised
+against real data. Documented honestly as unverified rather than presented
+as working.
 
 ## What this skill never does
 
 - Never places, modifies, or cancels an order.
-- Never requests the Trade or Transfer scopes — Market Data and Account
-  (read-only) are the only scopes this skill needs.
-- Never invents a liquidation price if the account tool doesn't return one
-  directly — see "Data contract" below.
+- Never requests the Trade or Transfer scopes — Account (read-only) and
+  Market Data are all it needs.
+- Never invents a margin level or liquidation price — if the account
+  carries no debt, it says so plainly rather than fabricating a ratio.
 
 ## How to use it
 
-1. Confirm the Binance MCP server is connected (`/mcp` in Claude Code) and
-   at minimum the **Market data** and **Account** scopes are granted.
-2. Ask something like: "How exposed am I on my BTCUSDT position?" or
-   "What happens to my margin if BTC drops 10%?"
-3. The skill calls the Binance MCP account/position tool and the market
-   data tool, passes the results to `scripts/margin_health.py`, and
-   narrates the output in plain English.
+1. Confirm the Binance Agent OS connector is enabled (Settings →
+   Connectors in claude.ai, or `/mcp` in Claude Code) with at least
+   **Account (read-only)** access granted.
+2. Ask something like: "How's my margin account looking?" or "Am I close
+   to a margin call?"
+3. The skill calls the account tool, passes the result to
+   `scripts/cross_margin_health.py`, and narrates the output.
 
-## Data contract
+## Data contract (confirmed live, not guessed)
 
-See the docstring in `scripts/margin_health.py` for the exact shape this
-skill expects. **Do not assume the raw MCP tool output matches this shape
-until Session 3 has verified it against a live connection** (ruleset
-Section 9.8 — new MCP tool behavior is confirmed, never assumed from the
-tool name). The field names here are a best-effort guess from Binance's
-public product docs, not a confirmed schema.
+`margin.queryCrossMarginAccountDetails` returns: `marginLevel`,
+`totalAssetOfBtc`, `totalLiabilityOfBtc`, `totalNetAssetOfBtc`,
+`tradeEnabled`, `transferEnabled`, `userAssets[]` (`asset`, `free`,
+`locked`, `borrowed`, `interest`, `netAsset`). Captured directly from a
+live call during Session 3 — see `fixtures/live_cross_margin_snapshot.json`.
 
-## Known open item
+## Known open items
 
-Whether the account/position tool returns liquidation price directly, or
-only raw position fields (entry price, size, leverage) that this skill
-must derive liquidation distance from itself using Binance's published
-maintenance-margin tier tables. Either path is handled in Session 2's
-design — see the Research Brief for the fallback plan.
+- Margin call (1.3x) and liquidation (1.1x) thresholds are Binance's
+  long-standing public levels, not re-verified against a live non-zero
+  account state (the connected account currently carries no debt).
+- Futures access remains blocked on this account; if it's ever enabled,
+  Session 2's engine is ready to be calibrated the same way Session 3
+  calibrated this one.

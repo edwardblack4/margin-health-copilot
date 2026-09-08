@@ -1,0 +1,19 @@
+{
+  "_note": "Captured live via margin.queryCrossMarginAccountDetails during Session 3, 2026-09-06. userAssets trimmed from ~360 real entries to a representative handful (BTC, ETH, USDT) -- every field name and value shown is copied verbatim from the actual response, nothing invented.",
+  "tradeEnabled": false,
+  "transferEnabled": true,
+  "transferInEnabled": true,
+  "transferOutEnabled": true,
+  "borrowEnabled": false,
+  "marginLevel": "999",
+  "totalAssetOfBtc": "0",
+  "totalLiabilityOfBtc": "0",
+  "totalNetAssetOfBtc": "0",
+  "userAssets": [
+    {"asset": "BTC", "free": "0", "locked": "0", "borrowed": "0", "interest": "0", "netAsset": "0"},
+    {"asset": "ETH", "free": "0", "locked": "0", "borrowed": "0", "interest": "0", "netAsset": "0"},
+    {"asset": "USDT", "free": "0", "locked": "0", "borrowed": "0", "interest": "0", "netAsset": "0"}
+  ],
+  "accountType": "MARGIN_1",
+  "created": false
+}

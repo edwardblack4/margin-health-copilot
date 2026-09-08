@@ -1,0 +1,18 @@
+{
+  "_note": "ILLUSTRATIVE ONLY -- not a live capture. The connected account currently carries no debt (see live_cross_margin_snapshot.json), so this hypothetical scenario exists purely to demonstrate the engine's margin-call branch for the demo. Same field schema as the real live snapshot.",
+  "tradeEnabled": true,
+  "transferEnabled": true,
+  "transferInEnabled": true,
+  "transferOutEnabled": true,
+  "borrowEnabled": true,
+  "marginLevel": "1.25",
+  "totalAssetOfBtc": "0.0143",
+  "totalLiabilityOfBtc": "0.01144",
+  "totalNetAssetOfBtc": "0.00286",
+  "userAssets": [
+    {"asset": "BTC", "free": "0.02", "locked": "0", "borrowed": "0", "interest": "0", "netAsset": "0.02"},
+    {"asset": "USDT", "free": "0", "locked": "0", "borrowed": "700", "interest": "0.14", "netAsset": "-700.14"}
+  ],
+  "accountType": "MARGIN_1",
+  "created": true
+}

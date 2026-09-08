@@ -2,40 +2,45 @@
 
 A read-only Claude Skill built for the Binance Agent OS Mini Hackathon (Track A).
 
-It turns a live Binance Agentic sub-account position into a plain-English
-early-warning system for liquidation risk. It never places a trade — it only
-reads account and market data through the Binance Agent OS MCP server
-(`https://agent.binance.com/mcp/agentic`) and narrates what it sees.
+It reads a connected Binance account through the Binance Agent OS MCP server
+(`https://agent.binance.com/mcp/agentic`) and narrates margin/liquidation
+risk in plain English. It never places a trade.
 
 ## Status
 
-Session 1 of 4 — scaffold only, no live connection yet. See
-`BUILD_ROADMAP.md` for what's next and `RESEARCH_BRIEF.md` for the
-reasoning behind the build (including why the hackathon's 3-day window
-ruled out a full backend/database build in favor of this skill-only shape).
+Session 3 of 4 — pivoted from Futures to Cross Margin after confirming
+Futures API access is blocked on the connected account (three endpoint
+variants tried, identical permissions error each time). Cross Margin
+health is now calibrated against a real live account call. See
+`SESSION_REPORT.md` for the full diagnostic trail and `RESEARCH_BRIEF.md`
+for the reasoning behind the original build shape.
 
 ## Structure
 
 ```
 margin-health-copilot/
-├── SKILL.md              — the skill definition Claude Code/Desktop loads
+├── SKILL.md                             — skill definition loaded by Claude Code/Desktop/claude.ai
 ├── scripts/
-│   └── margin_health.py  — calculation engine (interface stub — Session 2)
+│   ├── cross_margin_health.py           — LIVE-VERIFIED engine (Session 3, primary path)
+│   └── margin_health.py                 — Futures engine (Session 2, unverified — access blocked)
 ├── fixtures/
-│   ├── mock_account.json — sample Agentic sub-account position data
-│   └── mock_market.json  — sample market data (ticker, funding rate)
+│   ├── live_cross_margin_snapshot.json  — real captured live response
+│   ├── mock_cross_margin_at_risk.json   — illustrative at-risk scenario (labeled, not live)
+│   ├── mock_account.json                — Futures mock data (Session 1/2)
+│   └── mock_market.json                 — Futures mock data (Session 1/2)
 └── tests/
-    └── test_margin_health.py — validates fixtures + engine contract
+    ├── test_cross_margin_health.py      — 7 tests, including against the real snapshot
+    └── test_margin_health.py            — 7 tests, all against mock data
 ```
 
 ## Setup
 
-1. Connect the Binance Agent OS MCP server in Claude Code, Claude Desktop,
-   or another supported client (search Binance's developer docs for
-   "Binance MCP Server" for the current setup steps).
-2. Grant **Market data** and **Account** scopes only — this skill never
-   needs Trade or Transfer, and withdrawal is never available on Binance's
-   side regardless.
+1. Add the Binance Agent OS MCP server as a custom connector (Settings →
+   Connectors in claude.ai/Claude Desktop, or `/mcp` in Claude Code) —
+   URL: `https://agent.binance.com/mcp/agentic`.
+2. Grant **Account (read-only)** and **Market data** scopes only — this
+   skill never needs Trade or Transfer, and withdrawal is never available
+   on Binance's side regardless.
 3. Run the test harness locally (no install required — standard library
    only):
    ```

@@ -1,15 +1,28 @@
-## Session 1: Skill Scaffold
-**Date:** 2026-09-05
-**Goal:** Stand up the repo structure, skill definition shell, README, and mock-data test harness for the Margin Health Copilot.
+## Session 3: Live Connect & Calibrate (revised in-session — pivoted to Cross Margin)
+**Date:** 2026-09-06
+**Goal (as planned):** Connect the real Binance Agent OS MCP server, confirm what the account/position tool actually returns, calibrate Session 2's Futures engine to match.
+**Goal (as executed):** Same intent, different product — Futures access was blocked, so the live-calibration work happened against Cross Margin instead.
+
+**Diagnostic trail (in order):**
+1. Connector confirmed live and authenticated: `spot.exchangeInfo` (public, no auth) returned real data immediately.
+2. `futures_usds.positionInformationV2` → `{"code":-2015,"msg":"Invalid API-key, IP, or permissions for action"}`.
+3. `futures_usds.futuresAccountBalanceV3` → same error.
+4. `futures_usds.accountInformationV3` → same error.
+5. `futures_coin.accountInformation` → same error. Four Futures-specific endpoints, identical permissions error each time — ruled out a single-endpoint fluke.
+6. `spot.getAccount` → succeeded, real account data (real `uid`, real commission rates, `canTrade: true`).
+7. `margin.queryCrossMarginAccountDetails` → succeeded, real data (`marginLevel: "999"`, all zero balances, `created: false`).
+8. `wallet.accountStatus` → succeeded (`"Normal"`).
+9. User confirmed no funds available to deposit, and confirmed Futures activation was attempted on Binance's side — re-tested all three Futures variants again post-activation; identical error persisted. Root cause not confirmed (possible: propagation delay, sub-account-specific Futures enablement separate from the main account, or the connector authorization predating the Futures activation and needing to be redone) — not pursued further given the deadline.
+
+**Decision:** Pivot the live/primary path from Futures isolated-margin (Session 2) to Binance Cross Margin, which is authorized and returns real data right now. This is a genuine scope revision, not a routing-around of the blocker — logged here per the ruleset rather than silently changed.
 
 **Files added/changed:**
-- SKILL.md — skill definition Claude Code/Desktop will load; logic marked not-yet-implemented
-- scripts/margin_health.py — calculation engine interface stub (raises NotImplementedError by design)
-- fixtures/mock_account.json — sample Agentic sub-account position data (2 positions)
-- fixtures/mock_market.json — sample market data (mark price, funding rate) for both symbols
-- tests/test_margin_health.py — validates fixtures load correctly and the stub raises as expected
-- README.md — project overview and setup
-- .gitignore
+- scripts/cross_margin_health.py — new engine, real field names copied verbatim from a live call (not guessed): `marginLevel`, `totalAssetOfBtc`, `totalLiabilityOfBtc`, `totalNetAssetOfBtc`, `tradeEnabled`, `transferEnabled`, `userAssets[]`
+- fixtures/live_cross_margin_snapshot.json — the actual captured live response (userAssets trimmed from ~360 real entries to BTC/ETH/USDT; every field verbatim)
+- fixtures/mock_cross_margin_at_risk.json — illustrative at-risk scenario, explicitly labeled non-live, built to exercise the margin-call branch the real (debt-free) account can't demonstrate
+- tests/test_cross_margin_health.py — 7 tests: real snapshot, illustrative scenario, and constructed boundary values for all four status thresholds
+- SKILL.md — rewritten: Cross Margin is now the primary, live-verified capability; Futures marked explicitly as built-but-unverified
+- README.md, BUILD_ROADMAP.md — updated to reflect the pivot
 
 **Current full file tree:**
 ```
@@ -21,60 +34,40 @@ margin-health-copilot/
 ├── SESSION_REPORT.md
 ├── SKILL.md
 ├── fixtures/
+│   ├── live_cross_margin_snapshot.json
 │   ├── mock_account.json
+│   ├── mock_cross_margin_at_risk.json
 │   └── mock_market.json
 ├── scripts/
+│   ├── cross_margin_health.py
 │   └── margin_health.py
 └── tests/
+    ├── test_cross_margin_health.py
     └── test_margin_health.py
 ```
 
-**Dependencies installed:**
-- None. Switched from a planned pytest dependency to Python's built-in
-  `unittest` — this sandbox has no network access to actually verify a
-  pytest install, and the ruleset (Section 6, #9) says a new dependency
-  gets verified before it's trusted, not assumed. Standard library only
-  means this also runs with zero setup for you or for judges.
+**Dependencies installed:** None (standard library only, unchanged).
 
-**Supabase schema state:**
-- N/A — Agent-skill pattern, no database (Section 2).
+**Supabase schema state:** N/A — Agent-skill pattern, no database.
 
-**Env vars required:**
-- None yet, and Session 3 likely won't need any either — the Binance MCP
-  connection is a manual, human, browser-based OAuth-style consent step,
-  not an API key (see Research Brief).
+**Env vars required:** None — connector auth is browser-based OAuth-style consent, confirmed in practice this session (no API key ever touched this conversation).
 
-**Agent OS mode:** N/A this session — no live connection made; all work
-verified against mock fixtures only.
+**Agent OS mode:** LIVE. Real tool calls made this session: `spot.exchangeInfo`, `spot.getAccount`, `margin.queryCrossMarginAccountDetails` (x2), `wallet.accountStatus`, plus 4 failed Futures calls (documented above). All calls were read-only (USER_DATA/public endpoints) — nothing was written, no trade or transfer attempted.
 
-**Sub-account scope & limits:** Planned scopes: Market data (read) +
-Account (read) only. No Trade, no Transfer requested. No spend/position
-limits needed — this skill never writes, so Section 9.4 doesn't apply.
+**Sub-account scope & limits:** Confirmed in practice: Account (read-only) access works for Spot and Margin; Futures blocked. No Trade/Transfer used or needed.
 
-**Decision log (this session, if any live/testnet actions were taken):**
-- None — no live or testnet actions taken this session.
+**Decision log:**
+- Pivoted primary product from Futures to Cross Margin (reasoning above). Session 2's Futures engine is kept in the repo, not deleted — it's real, tested work, just unverified against live data given the access blocker.
 
-**API endpoints live:**
-- None — Agent-skill pattern, no apps/api (Section 2).
+**API endpoints live:** None — Agent-skill pattern, no apps/api. (Binance MCP tool calls are not "our" API, they're the live external verification target.)
 
 **Known stubs/mocks/TODOs:**
-- `analyze_position()` in scripts/margin_health.py deliberately raises
-  `NotImplementedError` — real math lands in Session 2.
-- SKILL.md's "Data contract" section and the `Position`/`MarketSnapshot`
-  TypedDicts in margin_health.py are a best-effort guess from Binance's
-  public product docs, unconfirmed against a live tool call.
+- `mock_cross_margin_at_risk.json` is explicitly illustrative — no real at-risk state exists on the connected account (zero debt everywhere). Session 4's demo needs to present this honestly as a constructed scenario, not imply it's live.
+- Margin call (1.3x) / liquidation (1.1x) thresholds are well-known public Binance levels, not re-confirmed against a live non-zero margin level.
+- Futures access root cause is unconfirmed — noted as an open item, not chased further given the deadline.
 
 **Assumptions carried into next session:**
-- Mock fixture shapes (mock_account.json / mock_market.json) approximate
-  what the real Binance MCP account/position and market-data tools return,
-  but this is NOT confirmed. Session 3 must verify actual field names
-  before Session 2's math is trusted against real data (ruleset Section
-  9.8 — new MCP tool behavior is confirmed, never assumed).
-- Whether the account/position tool returns liquidation price directly is
-  still open. Session 2's engine should be designed to handle either case
-  (see fallback plan in RESEARCH_BRIEF.md) rather than assuming one.
-- Deadline: September 8, 2026, 23:59 UTC — 3 sessions plus a demo recording
-  remain after this one.
+- Session 4's demo should show the real live "no debt" call first (proves genuine connectivity and correct handling of Binance's sentinel value), then walk through the illustrative at-risk scenario clearly labeled as such, rather than presenting one as if it were the other.
+- Deadline: September 8, 2026, 23:59 UTC — 1 session (demo + submission) remains.
 
-**Style history (only present on UI-touching sessions):**
-- N/A — no UI-touching work this session.
+**Style history:** N/A — no UI-touching work this session.
